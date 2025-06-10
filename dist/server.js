@@ -1,4 +1,4 @@
-const express = require('express');
+ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -7,53 +7,51 @@ const morgan = require('morgan');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const passport = require('passport');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const authRoutes = require('./routes/auth.js');
-const todoRoutes = require('./routes/todo.js');
-require('./config/passport')(passport);
-
+// ======= App Setup ======= //
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ======= Middleware Setup ======= //
+// ======= Middleware ======= //
 app.use(cors({ origin: 'http://localhost:8081' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 
 // ======= View Engine ======= //
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// ======= Passport Strategy ======= //
+require('./config/passport')(passport);
+
 // ======= Routes ======= //
+const authRoutes = require('./routes/auth');
+const todoRoutes = require('./routes/todo');
 app.use(authRoutes);
 app.use(todoRoutes);
 
-console.log('Routes loaded');
-
-
 // ======= MongoDB Connection ======= //
-mongoose.connect(process.env.MONGODB_STR)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_STR, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('✅ Connected to MongoDB'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
-//Home Route
+// ======= Default & 404 Routes ======= //
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// 404 Page
-// // This must be the last middleware after all routes
 app.use((req, res) => {
-  res.status(404).render('404'); // Catch-all 404
+  res.status(404).render('404');
 });
-
-
 
 // ======= Start Server ======= //
 app.listen(PORT, () => {
